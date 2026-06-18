@@ -2,16 +2,15 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import StringIO
-import google.generativeai as genai
 
 st.set_page_config(
-    page_title="AI 잔소리 가계부",
-    page_icon="💸",
+    page_title="스마트 소비 분석 가계부",
+    page_icon="💰",
     layout="wide"
 )
 
-st.title("💸 AI 잔소리 가계부")
-st.caption("돈을 쓸 때마다 잔소리하는 똑똑한 가계부")
+st.title("💰 스마트 소비 분석 가계부")
+st.write("소비 내역을 기록하고 나의 소비 습관을 분석해보세요.")
 
 # 세션 상태 초기화
 if "expenses" not in st.session_state:
@@ -19,193 +18,147 @@ if "expenses" not in st.session_state:
         columns=["날짜", "카테고리", "금액", "메모"]
     )
 
-categories = [
-    "식비",
-    "카페",
-    "교통",
-    "쇼핑",
-    "게임",
-    "배달",
-    "취미",
-    "기타"
-]
+# 사이드바 입력
+st.sidebar.header("➕ 소비 내역 입력")
 
-st.sidebar.header("➕ 소비 기록")
+date = st.sidebar.date_input("날짜")
 
-with st.sidebar.form("expense_form"):
-    date = st.date_input("날짜")
-    category = st.selectbox("카테고리", categories)
-    amount = st.number_input(
-        "금액",
-        min_value=0,
-        step=1000
-    )
-    memo = st.text_input("메모")
+category = st.sidebar.selectbox(
+    "카테고리",
+    ["식비", "교통", "쇼핑", "문화", "생활", "교육", "기타"]
+)
 
-    submitted = st.form_submit_button("기록하기")
+amount = st.sidebar.number_input(
+    "금액(원)",
+    min_value=0,
+    step=1000
+)
 
-    if submitted:
+memo = st.sidebar.text_input("메모")
+
+if st.sidebar.button("추가"):
+    try:
         if amount <= 0:
-            st.sidebar.error("금액은 0보다 커야 합니다.")
+            st.sidebar.error("금액은 0원보다 커야 합니다.")
         else:
-            new_row = pd.DataFrame([{
-                "날짜": date,
-                "카테고리": category,
-                "금액": amount,
-                "메모": memo
-            }])
+            new_data = pd.DataFrame({
+                "날짜": [date],
+                "카테고리": [category],
+                "금액": [amount],
+                "메모": [memo]
+            })
 
             st.session_state.expenses = pd.concat(
-                [st.session_state.expenses, new_row],
+                [st.session_state.expenses, new_data],
                 ignore_index=True
             )
 
-            st.sidebar.success("소비가 기록되었습니다.")
+            st.sidebar.success("소비 내역이 추가되었습니다.")
+
+    except Exception as e:
+        st.sidebar.error(f"오류 발생: {e}")
 
 df = st.session_state.expenses
 
+# 데이터 표시
+st.header("📋 소비 내역")
+
 if df.empty:
-    st.info("왼쪽에서 소비를 기록해보세요.")
-    st.stop()
+    st.info("아직 등록된 소비 내역이 없습니다.")
+else:
+    st.dataframe(df, use_container_width=True)
 
-st.subheader("📋 소비 내역")
-st.dataframe(df, use_container_width=True)
+    total = df["금액"].sum()
 
-# 소비왕
-st.subheader("🏆 가장 많이 사용한 항목")
+    col1, col2 = st.columns(2)
 
-category_sum = df.groupby("카테고리")["금액"].sum()
+    with col1:
+        st.metric("총 소비 금액", f"{total:,.0f} 원")
 
-top_category = category_sum.idxmax()
-top_amount = category_sum.max()
-
-st.success(
-    f"이번 달 소비왕은 '{top_category}' "
-    f"({top_amount:,.0f}원) 입니다."
-)
-
-# 파이차트
-st.subheader("🥧 카테고리별 소비 비율")
-
-fig1, ax1 = plt.subplots()
-
-ax1.pie(
-    category_sum,
-    labels=category_sum.index,
-    autopct="%1.1f%%"
-)
-
-ax1.axis("equal")
-
-st.pyplot(fig1)
-
-# 월간 소비 통계
-st.subheader("📊 월간 소비 통계")
-
-df["날짜"] = pd.to_datetime(df["날짜"])
-
-monthly = (
-    df.groupby(df["날짜"].dt.strftime("%Y-%m"))["금액"]
-    .sum()
-)
-
-fig2, ax2 = plt.subplots()
-
-monthly.plot(
-    kind="bar",
-    ax=ax2
-)
-
-ax2.set_ylabel("금액(원)")
-ax2.set_xlabel("월")
-
-st.pyplot(fig2)
-
-# 기본 잔소리
-def basic_nag(data):
-    sums = data.groupby("카테고리")["금액"].sum()
-
-    messages = []
-
-    if sums.get("카페", 0) >= 50000:
-        messages.append(
-            "☕ 커피값이 꽤 쌓였어요. 집 커피도 사랑해주세요."
-        )
-
-    if sums.get("게임", 0) >= 100000:
-        messages.append(
-            "🎮 게임은 재밌지만 통장 경험치도 챙겨야 해요."
-        )
-
-    if sums.get("배달", 0) >= 100000:
-        messages.append(
-            "🍔 배달앱과 너무 가까워진 것 같아요."
-        )
-
-    if sums.get("쇼핑", 0) >= 150000:
-        messages.append(
-            "🛍️ 장바구니를 다시 한 번 확인해볼까요?"
-        )
-
-    if not messages:
-        messages.append(
-            "👏 지금 소비 패턴은 비교적 건강해 보여요!"
-        )
-
-    return "\n".join(messages)
-
-st.subheader("🤖 AI 잔소리")
-
-api_key = st.secrets.get("GEMINI_API_KEY", "")
-
-if api_key:
-    try:
-        genai.configure(api_key=api_key)
-
-        model = genai.GenerativeModel(
-            "gemini-2.5-flash-lite"
-        )
-
-        summary = (
+    with col2:
+        top_category = (
             df.groupby("카테고리")["금액"]
             .sum()
-            .to_dict()
+            .idxmax()
         )
 
-        prompt = f"""
-다음 소비 내역을 보고
-재치 있고 귀여운 잔소리를 3줄 이내로 작성해줘.
-
-소비 내역:
-{summary}
-
-절약 팁도 하나 포함해줘.
-"""
-
-        response = model.generate_content(prompt)
-
-        st.warning(response.text)
-
-    except Exception:
-        st.warning(
-            "AI 잔소리를 불러오지 못해 기본 잔소리를 제공합니다."
+        top_amount = (
+            df.groupby("카테고리")["금액"]
+            .sum()
+            .max()
         )
-        st.warning(basic_nag(df))
 
-else:
-    st.info(
-        "GEMINI_API_KEY가 없어 기본 잔소리를 제공합니다."
+        st.metric(
+            "가장 많이 사용한 항목",
+            f"{top_category}",
+            f"{top_amount:,.0f} 원"
+        )
+
+    # 카테고리별 소비 비율
+    st.header("🥧 카테고리별 소비 비율")
+
+    category_sum = (
+        df.groupby("카테고리")["금액"]
+        .sum()
     )
-    st.warning(basic_nag(df))
 
-# CSV 다운로드
-st.subheader("⬇️ 소비 내역 다운로드")
+    fig1, ax1 = plt.subplots()
 
-csv = df.to_csv(index=False).encode("utf-8-sig")
+    ax1.pie(
+        category_sum,
+        labels=category_sum.index,
+        autopct="%1.1f%%"
+    )
 
-st.download_button(
-    label="CSV 다운로드",
-    data=csv,
-    file_name="expenses.csv",
-    mime="text/csv"
-)
+    ax1.axis("equal")
+
+    st.pyplot(fig1)
+
+    # 월간 소비 통계
+    st.header("📊 월간 소비 통계")
+
+    temp = df.copy()
+
+    temp["날짜"] = pd.to_datetime(temp["날짜"])
+
+    temp["월"] = temp["날짜"].dt.strftime("%Y-%m")
+
+    monthly = (
+        temp.groupby("월")["금액"]
+        .sum()
+        .sort_index()
+    )
+
+    fig2, ax2 = plt.subplots()
+
+    monthly.plot(
+        kind="bar",
+        ax=ax2
+    )
+
+    ax2.set_ylabel("금액(원)")
+    ax2.set_xlabel("월")
+
+    st.pyplot(fig2)
+
+    # CSV 다운로드
+    st.header("⬇️ 데이터 다운로드")
+
+    csv = df.to_csv(index=False)
+
+    st.download_button(
+        label="CSV 다운로드",
+        data=csv,
+        file_name="expenses.csv",
+        mime="text/csv"
+    )
+
+    # 데이터 초기화
+    st.header("🗑️ 데이터 관리")
+
+    if st.button("모든 데이터 삭제"):
+        st.session_state.expenses = pd.DataFrame(
+            columns=["날짜", "카테고리", "금액", "메모"]
+        )
+        st.success("모든 데이터가 삭제되었습니다.")
+        st.rerun()
