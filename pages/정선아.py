@@ -15,7 +15,7 @@ st.set_page_config(
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
-    st.error("🔑 Streamlit Secrets에 'GEMINI_API_KEY'가 설정되지 않았습니다. 설정 방법을 확인해주세요.")
+    st.error("GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"")
     st.stop()
 
 # 3. 세션 상태(Session State) 초기화 (데이터 휘발 방지)
