@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # 2. Gemini API 키 및 클라이언트 설정
-if "GEMINI_API_KEY" in st.secrets:
+if "GEMINI_API_KEY" in st.secrets:GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
     st.error("GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"")
