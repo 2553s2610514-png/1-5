@@ -71,9 +71,9 @@ if selected_sidebar != st.session_state.current_menu:
     st.rerun()
 
 
-# --- 7. 화면 조건문 처리 ---
+# --- 7. 화면 조건문 처리 (새로운 영어 파일명 적용 완료) ---
 
-# [화면 1] 메인 대시보드 홈 (버튼 형식 포함)
+# [화면 1] 메인 대시보드 홈
 if st.session_state.current_menu == "🏠 메인 홈 / 소비 요약":
     st.title("💸 AI 잔소리 가계부")
     st.markdown("### 이번 달 소비 현황 요약")
@@ -97,7 +97,7 @@ if st.session_state.current_menu == "🏠 메인 홈 / 소비 요약":
 
     st.write("---")
 
-    # 🎛️ 원하셨던 [메인 화면 버튼 형식 메뉴] 복구!
+    # 메인 화면 버튼 형식 메뉴
     st.subheader("🛠️ 다른 기능으로 이동")
     st.write("원하는 기능 버튼을 클릭하면 해당 페이지 화면으로 즉시 전환됩니다.")
 
@@ -129,23 +129,22 @@ if st.session_state.current_menu == "🏠 메인 홈 / 소비 요약":
             st.session_state.current_menu = "🌱 절약활동"
             st.rerun()
 
-# [화면 2] 소비분석 페이지 전환
+# [화면 2] 소비분석 페이지 전환 (송유림 -> report.py)
 elif st.session_state.current_menu == "📊 소비분석":
     st.title("📊 소비분석")
-    run_team_page("송유림.py", "소비분석")
+    run_team_page("report.py", "소비분석")
 
-# [화면 3] 소비기록 페이지 전환
+# [화면 3] 소비기록 페이지 전환 (안시윤 -> expensive.py)
 elif st.session_state.current_menu == "📝 소비기록":
     st.title("📝 소비기록")
-    run_team_page("안시윤.py", "소비기록")
+    run_team_page("expensive.py", "소비기록")
 
-# [화면 4] AI 잔소리 페이지 전환
+# [화면 4] AI 잔소리 페이지 전환 (김유민 -> scold.py)
 elif st.session_state.current_menu == "🤖 AI 잔소리":
     st.title("🤖 AI 잔소리")
-    run_team_page("김유민.py", "AI 잔소리")
+    run_team_page("scold.py", "AI 잔소리")
 
-# [화면 5] 절약활동 페이지 전환
+# [화면 5] 절약활동 페이지 전환 (정선아 -> challenge.py)
 elif st.session_state.current_menu == "🌱 절약활동":
     st.title("🌱 절약활동")
-    run_team_page("정선아.py", "절약활동")
-
+    run_team_page("challenge.py", "절약활동")
