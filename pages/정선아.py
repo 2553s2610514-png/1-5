@@ -15,7 +15,7 @@ st.set_page_config(
 if "GEMINI_API_KEY" in st.secrets:GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
-    st.error("GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"")
+    st.error("GEMINI_API_KEY = " "YOUR_ACTUAL_API_KEY""")
     st.stop()
 
 # 3. 세션 상태(Session State) 초기화 (데이터 휘발 방지)
