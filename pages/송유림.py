@@ -22,7 +22,7 @@ def create_empty_df():
 if "expenses" not in st.session_state:
     st.session_state.expenses = create_empty_df()
 
-# 잘못된 데이터가 저장되어 있으면 초기화
+# 잘못된 데이터 복구
 if (
     not isinstance(st.session_state.expenses, pd.DataFrame)
     or not all(
@@ -34,8 +34,9 @@ if (
 
 df = st.session_state.expenses
 
-
-# 사이드바 입력
+# ----------------------
+# 소비 입력
+# ----------------------
 st.sidebar.header("➕ 소비 내역 입력")
 
 date = st.sidebar.date_input("날짜")
@@ -69,11 +70,23 @@ if st.sidebar.button("추가"):
             ignore_index=True
         )
 
-        st.sidebar.success("추가되었습니다.")
+        st.sidebar.success("소비 내역이 추가되었습니다.")
         st.rerun()
 
-df = st.session_state.expenses
+df = st.session_state.expenses.copy()
 
+# 금액 숫자 변환
+df["금액"] = pd.to_numeric(
+    df["금액"],
+    errors="coerce"
+)
+
+# 숫자가 아닌 금액 제거
+df = df.dropna(subset=["금액"])
+
+# ----------------------
+# 소비 내역
+# ----------------------
 st.header("📋 소비 내역")
 
 if df.empty:
@@ -82,6 +95,7 @@ if df.empty:
 else:
     st.dataframe(df, use_container_width=True)
 
+    # 총 소비 금액
     total = df["금액"].sum()
 
     st.header("📌 소비 요약")
@@ -89,31 +103,56 @@ else:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.metric("총 소비 금액", f"{total:,.0f} 원")
-
-    with col2:
-        category_total = df.groupby("카테고리")["금액"].sum()
-
         st.metric(
-            "가장 많이 사용한 항목",
-            category_total.idxmax(),
-            f"{category_total.max():,.0f} 원"
+            "총 소비 금액",
+            f"{total:,.0f} 원"
         )
 
+    with col2:
+        category_total = (
+            df.groupby("카테고리")["금액"]
+            .sum()
+        )
+
+        if not category_total.empty:
+            st.metric(
+                "가장 많이 사용한 항목",
+                category_total.idxmax(),
+                f"{category_total.max():,.0f} 원"
+            )
+
+    # ----------------------
+    # 카테고리별 소비 비율
+    # ----------------------
     st.header("🥧 카테고리별 소비 비율")
 
-    fig1, ax1 = plt.subplots()
-
-    ax1.pie(
-        category_total,
-        labels=category_total.index,
-        autopct="%1.1f%%"
+    category_total = (
+        df.groupby("카테고리")["금액"]
+        .sum()
     )
 
-    ax1.axis("equal")
+    category_total = category_total[
+        category_total > 0
+    ]
 
-    st.pyplot(fig1)
+    if category_total.empty:
+        st.info("파이 차트를 표시할 데이터가 없습니다.")
+    else:
+        fig1, ax1 = plt.subplots()
 
+        ax1.pie(
+            category_total.values,
+            labels=category_total.index,
+            autopct="%1.1f%%"
+        )
+
+        ax1.axis("equal")
+
+        st.pyplot(fig1)
+
+    # ----------------------
+    # 월간 소비 통계
+    # ----------------------
     st.header("📊 월간 소비 통계")
 
     temp = df.copy()
@@ -125,7 +164,9 @@ else:
 
     temp = temp.dropna(subset=["날짜"])
 
-    if not temp.empty:
+    if temp.empty:
+        st.info("월간 통계를 표시할 데이터가 없습니다.")
+    else:
         temp["월"] = temp["날짜"].dt.strftime("%Y-%m")
 
         monthly = (
@@ -134,18 +175,29 @@ else:
             .sort_index()
         )
 
-        fig2, ax2 = plt.subplots()
+        if monthly.empty:
+            st.info("월간 통계를 표시할 데이터가 없습니다.")
+        else:
+            fig2, ax2 = plt.subplots()
 
-        monthly.plot(kind="bar", ax=ax2)
+            monthly.plot(
+                kind="bar",
+                ax=ax2
+            )
 
-        ax2.set_xlabel("월")
-        ax2.set_ylabel("금액(원)")
+            ax2.set_xlabel("월")
+            ax2.set_ylabel("금액(원)")
 
-        st.pyplot(fig2)
+            st.pyplot(fig2)
 
+    # ----------------------
+    # CSV 다운로드
+    # ----------------------
     st.header("⬇️ CSV 다운로드")
 
-    csv = df.to_csv(index=False).encode("utf-8-sig")
+    csv = df.to_csv(
+        index=False
+    ).encode("utf-8-sig")
 
     st.download_button(
         "CSV 다운로드",
@@ -154,9 +206,12 @@ else:
         mime="text/csv"
     )
 
+    # ----------------------
+    # 데이터 초기화
+    # ----------------------
     st.header("🗑️ 데이터 관리")
 
     if st.button("모든 데이터 삭제"):
         st.session_state.expenses = create_empty_df()
-        st.success("삭제되었습니다.")
+        st.success("모든 데이터가 삭제되었습니다.")
         st.rerun()
